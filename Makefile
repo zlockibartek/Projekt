@@ -1,6 +1,7 @@
 # Wpisz "make all", aby skompilowac program
-CC=gcc test.c glad.c -lglfw -lGL -ldl `pkg-config --libs --cflags glfw3`
-
-all: test.o  glad.o
-	$(CC) test.o glad.o -o test
-test.o
+snake:  moje.c snake.c glad.c fifo.c
+	gcc moje.c snake.c glad.c fifo.c -o snake -lglfw -lGL -ldl `pkg-config --libs --cflags glfw3`
+moje.o: moje.c
+snake.o: snake.c
+glad.o: glad.c glad.h
+fifo.o: fifo.c
