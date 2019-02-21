@@ -1,29 +1,15 @@
 #include "libs/glad.h"
+#include "snake.h"
+#include "fifo.h"
 #include<GLFW/glfw3.h>
 #include<stdlib.h>
 #include<stdio.h>
 #include<stdlib.h>
 #include<stdbool.h>
 
-struct Queue
-{
-	int first, last, size;
-	unsigned capacity;
-	int* array;
-};
 void processInput(GLFWwindow* window);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void leftMovement(float *tab,int *tab1,int x);
-void rightMovement(float *tab,int *tab1,int x);
-void bottomMovement(float *tab,int *tab1,int x);
-void topMovement(float *tab,int *tab1,int x);
-void spawnFood(int *tab);
-struct Queue* createQueue(unsigned capacity);
-int isEmpty(struct Queue* queue);
-void push(struct Queue* queue, int item);
-int pop(struct Queue* queue);
-int first(struct Queue* queue);
-int last(struct Queue* queue);
+void spawnFood(int *tab, float *tab1);
 
 const char *vertexShaderSource = "#version 330 core\n"
     "layout (location = 0) in vec3 aPos;\n"
@@ -61,9 +47,17 @@ float vertices[]={
         -1.0f,  0.9f, 0.0f,  // bottom left
         -1.0f,  1.0f, 0.0f   // top left
 };
-struct Queue* queue = createQueue(400);
-push(queue,0);
+float apple []={
+        -0.8f,  0.9f, 0.0f,  // top right
+        -0.8f,  0.8f, 0.0f,  // bottom right
+        -0.9f,  0.8f, 0.0f,  // bottom left
+        -0.9f,  0.9f, 0.0f   // top left
+};
+struct Queue* queue = create(0);
+struct Queue* pom=queue;
 int board[400]={0}; // board
+int length=1,vert;
+board[21]=2;
 int xTail,yTail; // tail location
 int xHead=0,yHead=0; // head location
 unsigned int indices[]={
@@ -91,6 +85,15 @@ glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(indices),indices,GL_STREAM_DRAW);
 glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,3*sizeof(float),(void*)0);
 glEnableVertexAttribArray(0);
 
+/*glBindVertexArray(VAO[1]);
+
+glBindBuffer(GL_ARRAY_BUFFER,VBO[1]);
+glBufferData(GL_ARRAY_BUFFER,sizeof(apple),apple,GL_STREAM_DRAW);
+
+glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,EBO);
+glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(indices),indices,GL_STREAM_DRAW);
+glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,3*sizeof(float),(void*)0);
+glEnableVertexAttribArray(0);*/
 int success;
 char infoLog[512];
 
@@ -134,7 +137,7 @@ glDeleteShader(vertexShader);
 glDeleteShader(fragmentShader);
 
 glViewport(0,0,800,600);
-int key=0, last_key=0,isFood=0;
+int key=0, last_key=0,isFood=1;
 float seconds =0.25;
 int timer=0;
 float start_time;
@@ -145,15 +148,6 @@ while (!glfwWindowShouldClose(window))
 		start_time=glfwGetTime();
 		timer=1;
 	}
-	for (int i=0; i<20; i++)
-	{
-		for (int j=0; j<20; j++)
-		{
-			printf("%d",board[i*20+j]);
-		}
-		printf("\n");
-	}
-	printf("\n");
 	processInput(window);
 	if (glfwGetKey(window,GLFW_KEY_RIGHT)==GLFW_PRESS) // right movement
 	{
@@ -175,8 +169,10 @@ while (!glfwWindowShouldClose(window))
 		if (last_key!=2)
 			key=3;
 	}
+	//printf("\n %f ala %f", apple[0],apple[1]);
 	if (isFood==0){
-	spawnFood(&board[0]);
+	spawnFood(&board[0],&apple[0]);
+	length++;
 	isFood=1;
 	}
 	if (glfwGetTime()>start_time+seconds)
@@ -189,12 +185,12 @@ while (!glfwWindowShouldClose(window))
 			xHead=0;
 		if (board[yHead*20+xHead]==2)
 			isFood=0;
-		push(queue,yHead*20+xHead);
-		board[first(queue)]=0;
+		queue=push(queue,yHead*20+xHead);
+		board[queue->val]=0;
 		if (board[yHead*20+xHead]==1)
 			glfwSetWindowShouldClose(window,1);
 		if (board[yHead*20+xHead]!=2)
-			pop(queue);
+			queue=pop(queue);
 		rightMovement(&vertices[0],&board[0],yHead*20+xHead);
 		break;
 		case 1:
@@ -203,12 +199,12 @@ while (!glfwWindowShouldClose(window))
 			xHead=19;
 		if (board[yHead*20+xHead]==2)
 			isFood=0;
-		push(queue,yHead*20+xHead);
-		board[first(queue)]=0;
+		queue=push(queue,yHead*20+xHead);
+		board[queue->val]=0;
 		if (board[yHead*20+xHead]==1)
 			glfwSetWindowShouldClose(window,1);
 		if (board[yHead*20+xHead]!=2)
-			pop(queue);
+			queue=pop(queue);
 		leftMovement(&vertices[0],&board[0],yHead*20+xHead);
 		break;
 		case 2:
@@ -217,12 +213,12 @@ while (!glfwWindowShouldClose(window))
 			yHead=0;
 		if (board[yHead*20+xHead]==2)
 			isFood=0;
-		push(queue,yHead*20+xHead);
-		board[first(queue)]=0;
+		queue=push(queue,yHead*20+xHead);
+		board[queue->val]=0;
 		if (board[yHead*20+xHead]==1)
 			glfwSetWindowShouldClose(window,1);
 		if (board[yHead*20+xHead]!=2)
-			pop(queue);
+			queue=pop(queue);
 		bottomMovement(&vertices[0],&board[0],yHead*20+xHead);
 		break;
 		case 3:
@@ -231,33 +227,61 @@ while (!glfwWindowShouldClose(window))
 			yHead=19;
 		if (board[yHead*20+xHead]==2)
 			isFood=0;
-		push(queue,yHead*20+xHead);
-		board[first(queue)]=0;
+		queue=push(queue,yHead*20+xHead);
+		board[queue->val]=0;
 		if (board[yHead*20+xHead]==1)
 			glfwSetWindowShouldClose(window,1);
 		if (board[yHead*20+xHead]!=2)
-			pop(queue);
-
+			queue=pop(queue);
 		topMovement(&vertices[0],&board[0],yHead*20+xHead);
 		break;
 	}
+	for (int i=0; i<20; i++)
+	{
+		for (int j=0; j<20; j++)
+		{
+			printf("%d",board[i*20+j]);
+		}
+		printf("\n");
+	}
+	printf("\n");
 	last_key = key;
 	timer=0;
 	}
-	glBindBuffer(GL_ARRAY_BUFFER,VBO);
-	glBufferData(GL_ARRAY_BUFFER,sizeof(vertices),vertices,GL_STREAM_DRAW);
+	glUseProgram(shaderProgram);
+
 	glClearColor(0.2f,0.3f,0.3f,1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	glUseProgram(shaderProgram);
 	glBindVertexArray(VAO);
+	pom=queue;
+	glBindBuffer(GL_ARRAY_BUFFER,VBO);
+	for (int i=0; i<length; i++)
+	{
+	vert=pom->val;
+	int p1=vert%20,p2=vert/20;
+	vertices[0]=(p1-10)*(0.1f);
+	vertices[3]=(p1-10)*(0.1f);
+	vertices[6]=(p1-10)*(0.1f)+0.1f;
+	vertices[9]=(p1-10)*(0.1f)+0.1f;
+	vertices[1]=-(p2-10)*(0.1f)-0.1f;
+	vertices[4]=-(p2-10)*(0.1f);
+	vertices[7]=-(p2-10)*(0.1f);
+	vertices[10]=-(p2-10)*(0.1f)-0.1f;
+	glBufferData(GL_ARRAY_BUFFER,sizeof(vertices),vertices,GL_STREAM_DRAW);
 	glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
+	pom=pom->next;
+	}
 
+
+	glBufferData(GL_ARRAY_BUFFER,sizeof(apple),apple,GL_STREAM_DRAW);
+	glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
+	
 	glfwSwapBuffers(window);
 	glfwPollEvents();
 
 }
-	glDeleteBuffers(1,&VBO);
+	//glDeleteBuffers(2,VBO);
 
 	glfwTerminate();
 	return 0;
@@ -272,13 +296,29 @@ void processInput(GLFWwindow* window)
 	if(glfwGetKey(window,GLFW_KEY_ESCAPE)==GLFW_PRESS)
 		glfwSetWindowShouldClose(window,1);
 }
-void spawnFood(int *tab)
+void spawnFood(int *tab,float *tab1)
 {
 	int x;
 	while (1) {
 	x=(int)(glfwGetTime()*400)%400;
-	if (tab[x]==0)
+	if (tab[x]==0 && (x%20-10)*(0.1f)-0.1f>=0 && (x/20-10)*(0.1f)-0.1f>=0)
 		break;
 	}
 	tab[x]=2;
+	int p1=x%20,p2=x/20;
+	tab1[0]=(p1-10)*(0.1f);
+	tab1[3]=(p1-10)*(0.1f);
+	tab1[6]=(p1-10)*(0.1f)+0.1f;
+	tab1[9]=(p1-10)*(0.1f)+0.1f;
+	tab1[1]=-(p2-10)*(0.1f)-0.1f;
+	tab1[4]=-(p2-10)*(0.1f);
+	tab1[7]=-(p2-10)*(0.1f);
+	tab1[10]=-(p2-10)*(0.1f)-0.1f;
+	for(int i = 0; i < 12; i++){
+		printf("%f ", tab1[i]);
+		if((i + 1)%3 == 0){
+			printf("\n");
+		}
+	}
+	
 }
