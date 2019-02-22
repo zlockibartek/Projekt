@@ -1,0 +1,13 @@
+Struktury:
+Queue - przechowuje informację o pozycji węża w tablicy i zawiera wskaźnik na kolejny element.
+
+Funkcje:
+struct Queue* create(int val) - Tworzy pustą strukturę i przypisuje pierwszemu elementowi wartość val oraz wskazuje na NULL.
+struct Queue* push(struct Queue* queue, int item) - Przypisuje kolejnemu elementowi węża nową wartość i przypisuje poprzedniemu elementowi wskaźnik na siebie.
+struct Queue* pop(struct Queue* queue) - Zwalnia ostatni element i zwraca wskaźnik na przedostatni element.
+void leftMovement(float *tab,int *tab1,int x) - Przesuwa węża w lewo.
+void rightMovement(float *tab,int *tab1,int x) - Przesuwa węża w prawo.
+void bottomMovement(float *tab,int *tab1,int x) - Przesuwa węża w dół.
+void topMovement(float *tab,int *tab1,int x) - Przesuwa węża w górę.
+void spawnFood(int *tab, float *tab1) - Wybiera pseudolosowe miejsce w tablicy, gdzie umieszcza jabłko.
+int isFoo(int *tab) - Sprawdza czy w tablicy znajduje się jabłko.

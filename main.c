@@ -10,6 +10,7 @@
 void processInput(GLFWwindow* window);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void spawnFood(int *tab, float *tab1);
+int isFoo(int *tab);
 
 const char *vertexShaderSource = "#version 330 core\n"
     "layout (location = 0) in vec3 aPos;\n"
@@ -19,9 +20,10 @@ const char *vertexShaderSource = "#version 330 core\n"
     "}\0";
 const char *fragmentShaderSource = "#version 330 core\n"
     "out vec4 FragColor;\n"
+    "uniform vec4 myColor;\n"
     "void main()\n"
     "{\n"
-    "   FragColor = vec4(0.0f, 0.5f, 0.6f, 1.0f);\n"
+    "   FragColor = myColor;\n"
     "}\n\0";
 
 int main()
@@ -58,7 +60,6 @@ struct Queue* pom=queue;
 int board[400]={0}; // board
 int length=1,vert;
 board[21]=2;
-int xTail,yTail; // tail location
 int xHead=0,yHead=0; // head location
 unsigned int indices[]={
 	0, 1, 3, // first triangle
@@ -85,15 +86,6 @@ glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(indices),indices,GL_STREAM_DRAW);
 glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,3*sizeof(float),(void*)0);
 glEnableVertexAttribArray(0);
 
-/*glBindVertexArray(VAO[1]);
-
-glBindBuffer(GL_ARRAY_BUFFER,VBO[1]);
-glBufferData(GL_ARRAY_BUFFER,sizeof(apple),apple,GL_STREAM_DRAW);
-
-glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,EBO);
-glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(indices),indices,GL_STREAM_DRAW);
-glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,3*sizeof(float),(void*)0);
-glEnableVertexAttribArray(0);*/
 int success;
 char infoLog[512];
 
@@ -170,11 +162,7 @@ while (!glfwWindowShouldClose(window))
 			key=3;
 	}
 	//printf("\n %f ala %f", apple[0],apple[1]);
-	if (isFood==0){
-	spawnFood(&board[0],&apple[0]);
-	length++;
-	isFood=1;
-	}
+  isFoo(&board[0]);
 	if (glfwGetTime()>start_time+seconds)
 	{
 	switch(key)
@@ -236,6 +224,12 @@ while (!glfwWindowShouldClose(window))
 		topMovement(&vertices[0],&board[0],yHead*20+xHead);
 		break;
 	}
+
+	if (isFoo(&board[0])==0){
+	spawnFood(&board[0],&apple[0]);
+	length++;
+	isFood=1;
+	}
 	for (int i=0; i<20; i++)
 	{
 		for (int j=0; j<20; j++)
@@ -250,7 +244,7 @@ while (!glfwWindowShouldClose(window))
 	}
 	glUseProgram(shaderProgram);
 
-	glClearColor(0.2f,0.3f,0.3f,1.0f);
+	glClearColor(0.0f,0.0f,0.0f,1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glBindVertexArray(VAO);
@@ -269,19 +263,23 @@ while (!glfwWindowShouldClose(window))
 	vertices[7]=-(p2-10)*(0.1f);
 	vertices[10]=-(p2-10)*(0.1f)-0.1f;
 	glBufferData(GL_ARRAY_BUFFER,sizeof(vertices),vertices,GL_STREAM_DRAW);
+  if (i==length-1)
+    glUniform4f( glGetUniformLocation(shaderProgram, "myColor"), 1.0, 0.6, 0.0, 1.0);
+  else
+	  glUniform4f( glGetUniformLocation(shaderProgram, "myColor"), 1.0, 1.0, 0.0, 1.0);
 	glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
 	pom=pom->next;
 	}
 
 
 	glBufferData(GL_ARRAY_BUFFER,sizeof(apple),apple,GL_STREAM_DRAW);
+	glUniform4f( glGetUniformLocation(shaderProgram, "myColor"), 1.0, 0.0, 0.0, 1.0);
 	glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
 	
 	glfwSwapBuffers(window);
 	glfwPollEvents();
 
 }
-	//glDeleteBuffers(2,VBO);
 
 	glfwTerminate();
 	return 0;
@@ -296,6 +294,13 @@ void processInput(GLFWwindow* window)
 	if(glfwGetKey(window,GLFW_KEY_ESCAPE)==GLFW_PRESS)
 		glfwSetWindowShouldClose(window,1);
 }
+int isFoo(int *tab)
+{
+  for (int i=0; i<400; i++)
+    if (tab[i]==2)
+      return 1;
+  return 0;
+}
 void spawnFood(int *tab,float *tab1)
 {
 	int x;
@@ -305,6 +310,7 @@ void spawnFood(int *tab,float *tab1)
 		break;
 	}
 	tab[x]=2;
+  //printf(">> %d\n", x);
 	int p1=x%20,p2=x/20;
 	tab1[0]=(p1-10)*(0.1f);
 	tab1[3]=(p1-10)*(0.1f);
@@ -314,11 +320,4 @@ void spawnFood(int *tab,float *tab1)
 	tab1[4]=-(p2-10)*(0.1f);
 	tab1[7]=-(p2-10)*(0.1f);
 	tab1[10]=-(p2-10)*(0.1f)-0.1f;
-	for(int i = 0; i < 12; i++){
-		printf("%f ", tab1[i]);
-		if((i + 1)%3 == 0){
-			printf("\n");
-		}
-	}
-	
 }
